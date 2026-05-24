@@ -1,199 +1,180 @@
-# 🎙️ AI Interview Tool
+# 🎯 AI Interview Coach
 
-An AI-powered mock interview simulator built with **Streamlit** and **OpenAI GPT-4o**. Practice job interviews for top tech and data roles, get real-time conversational feedback from a simulated HR executive, and receive a scored performance review — all in your browser.
-
-> *Because practicing in the mirror only tells you so much.*
+A Streamlit-powered interview preparation tool that uses OpenAI's GPT-4o to simulate realistic job interviews across **any role, industry, or seniority level**. Get grilled by an AI panel, then receive structured, actionable feedback — no scheduling, no awkward handshakes.
 
 ---
 
-## 🚀 Features
+## ✨ Features
 
-- **Personalized Interview Setup** — Enter your name, experience, and skills before the session begins
-- **Role & Company Targeting** — Select your target level (Junior / Mid-level / Senior), position, and company
-- **AI-Driven HR Interviewer** — GPT-4o plays the role of an HR executive tailored to your profile
-- **5-Round Conversation Flow** — Structured interview with up to 5 exchanges to keep sessions focused
-- **Automated Feedback & Scoring** — After the interview, receive a 1–10 score and detailed performance feedback
-- **Session State Management** — Clean multi-stage flow: Setup → Interview → Feedback → Restart
-- **🆕 Voice Input via Whisper** — Speak your answers aloud; OpenAI Whisper transcribes them in real time before submission
-
----
-
-## 🖥️ Supported Roles & Companies
-
-| Positions | Companies |
-|-----------|-----------|
-| Data Scientist | Amazon |
-| Data Engineer | Meta |
-| ML Engineer | Udemy |
-| BI Analyst | LinkedIn |
-| Financial Analyst | Spotify |
-| | Nestle |
-| | 365 Company |
+- **Position-agnostic** — works for any job title (Data Scientist, Program Manager, DevOps Engineer, you name it)
+- **Fully configurable role context** — set company, industry, seniority level, and interview style
+- **Paste-in Job Description** — optional JD field so the AI targets questions to the actual role requirements
+- **Multiple interview styles** — Behavioral (STAR), Technical Deep-Dive, Case Study, Culture Fit, or Mixed
+- **Adjustable question count** — slider from 3–10 questions per session
+- **Streaming responses** — real-time AI replies for a natural conversational feel
+- **Structured feedback** — scored out of 10 with Strengths, Areas for Improvement, Hire Recommendation, and Top Tip
+- **Downloadable feedback** — export results as `.txt` for post-interview reflection
+- **Session state management** — clean multi-stage flow (Setup → Interview → Feedback → Restart)
 
 ---
 
 ## 🛠️ Tech Stack
 
-| Component | Technology |
-|-----------|------------|
-| Frontend / UI | [Streamlit](https://streamlit.io/) ≥ 1.31.0 |
-| AI Chat Engine | [OpenAI GPT-4o](https://platform.openai.com/docs/) |
-| Voice Transcription | [OpenAI Whisper](https://platform.openai.com/docs/guides/speech-to-text) (`whisper-1`) |
-| Language | Python 3.9+ |
-| State Management | Streamlit Session State |
+| Layer | Technology |
+|---|---|
+| Frontend / UI | [Streamlit](https://streamlit.io/) |
+| LLM Backend | [OpenAI GPT-4o](https://platform.openai.com/) via `openai` Python SDK |
+| State Management | Streamlit `st.session_state` |
+| Deployment | Streamlit Community Cloud / self-hosted |
 
 ---
 
-## 📦 Installation
+## 🚀 Getting Started
 
-### 1. Clone the Repository
+### Prerequisites
 
-```bash
-git clone https://github.com/collins73/interview-tool.git
-cd interview-tool
-```
+- Python 3.9+
+- An OpenAI API key
 
-### 2. Create and Activate a Virtual Environment
+### Installation
 
 ```bash
-python -m venv venv
-source venv/bin/activate        # macOS/Linux
-venv\Scripts\activate           # Windows
-```
+# Clone the repository
+git clone https://github.com/<your-username>/<your-repo>.git
+cd <your-repo>
 
-### 3. Install Dependencies
-
-```bash
+# Install dependencies
 pip install streamlit openai
 ```
 
-> **Note:** Voice input requires **Streamlit ≥ 1.31.0**. Verify with `streamlit --version` and upgrade if needed:
-> ```bash
-> pip install --upgrade streamlit
-> ```
+### Configure API Key
 
-### 4. Configure Your OpenAI API Key
-
-Create a Streamlit secrets file:
-
-```bash
-mkdir -p .streamlit
-touch .streamlit/secrets.toml
-```
-
-Add your key to `.streamlit/secrets.toml`:
+Create a `.streamlit/secrets.toml` file in the project root:
 
 ```toml
-OPENAI_API_KEY = "sk-your-openai-api-key-here"
+OPENAI_API_KEY = "sk-..."
 ```
 
-> ⚠️ **Never commit your API key to version control.** The `.gitignore` in this repo already excludes `.streamlit/secrets.toml`.
+> ⚠️ **Never commit your API key.** Add `.streamlit/secrets.toml` to your `.gitignore`.
 
----
-
-## ▶️ Running the App
+### Run the App
 
 ```bash
-streamlit run app.py
+streamlit run interview_tool.py
 ```
 
-The app will open in your browser at `http://localhost:8501`.
+The app will open at `http://localhost:8501`.
 
 ---
 
-## 🗺️ How It Works
+## 📂 Project Structure
 
 ```
-1. Setup Screen
-   └─ Enter name, experience, skills
-   └─ Select level, position, and target company
-   └─ Choose response mode: Text or Voice (Whisper)
-   └─ Click "Start Interview"
+.
+├── interview_tool.py          # Main application
+├── .streamlit/
+│   └── secrets.toml           # API keys (gitignored)
+├── requirements.txt           # Python dependencies
+└── README.md
+```
 
-2. Interview Screen
-   └─ AI HR Executive introduces the session
-   └─ Text mode: type your response (up to 1000 chars)
-   └─ Voice mode: record your answer → Whisper transcribes → review → submit
-   └─ GPT-4o maintains full context across all 5 exchanges
+### `requirements.txt`
 
-3. Feedback Screen
-   └─ Click "Get Feedback"
-   └─ Receive Overall Score (1–10) + detailed feedback
-   └─ Restart anytime for another round
+```
+streamlit>=1.35.0
+openai>=1.30.0
 ```
 
 ---
 
-## 📁 Project Structure
+## 🗺️ App Flow
 
 ```
-interview-tool/
-│
-├── app.py              # Main Streamlit application
-├── example1.py         # Example / prototype script
-├── .gitignore          # Excludes secrets and env files
-└── README.md           # You are here 📍
+[Setup Stage]
+    ├── Candidate: Name, Experience, Skills
+    └── Role: Position (free text), Company, Industry, Level, Interview Style, JD (optional)
+            │
+            ▼
+[Interview Stage]
+    ├── AI interviewer greets candidate and asks questions one at a time
+    ├── Streaming responses via GPT-4o
+    └── Progress bar tracks question count (configurable 3–10)
+            │
+            ▼
+[Feedback Stage]
+    ├── Structured score out of 10
+    ├── Strengths / Areas for Improvement / Hire Recommendation
+    ├── Single top tip for next interview
+    └── Download feedback as .txt
 ```
 
 ---
 
-## 🎙️ Voice Mode — How It Works
+## ⚙️ Configuration Options
 
-When **Voice (Whisper)** is selected at setup, the interview input switches from a text box to Streamlit's built-in audio recorder:
-
-1. Click the microphone button to start recording
-2. Speak your answer naturally
-3. Stop recording — Whisper (`whisper-1`) transcribes the audio automatically
-4. Review the transcript on screen
-5. Click **✅ Submit this response** to send it to the AI interviewer
-
-This simulates a real interview environment where you're speaking, not typing — great for practicing delivery, pacing, and articulation. Your audio is sent directly to OpenAI's API and is never stored locally beyond the active session.
-
----
-
-
-
-- API keys are loaded from Streamlit's secrets management — never hardcoded
-- The `.gitignore` excludes `secrets.toml`, virtual environments, and compiled Python files
-- No user data is stored or persisted beyond the active session
+| Field | Type | Description |
+|---|---|---|
+| Full Name | Text input | Candidate name used in prompts |
+| Seniority Level | Dropdown | Intern → Executive |
+| Job Title / Position | Free text | Any role — no dropdown limits |
+| Company | Free text | Target company for context |
+| Industry / Domain | Free text | e.g., Defense, FinTech, Healthcare |
+| Interview Style | Dropdown | Behavioral, Technical, Case Study, Culture Fit, Mixed |
+| Job Description | Text area | Optional JD paste-in (up to 1,500 chars) |
+| Question Count | Slider | 3–10 questions per session |
 
 ---
 
-## 🔮 Roadmap / Future Enhancements
+## 🐛 Changelog
 
-- [ ] Add support for technical / coding interview rounds
-- [ ] Expand company and role library
-- [ ] Export interview transcript as PDF
-- [x] ~~Voice input via Whisper~~ ✅ — shipped
-- [ ] AI voice responses via OpenAI TTS
-- [ ] Deploy to Streamlit Community Cloud with one-click setup
-- [ ] User authentication and session history
+### v2.0.0 — Position-Agnostic Refactor
+
+**Bug Fixes**
+- Fixed broken `from` import statement (incomplete import in original)
+- Fixed duplicate column variable `col2, col2` → corrected to `col1, col2`
+- Fixed undefined `col3` reference causing `NameError` at runtime
+- Fixed incorrect OpenAI model name `"gpt-3o"` → `"gpt-4o"`
+- Fixed `choices[1]` index error on feedback response → `choices[0]`
+- Removed dependency on `streamlit_js_eval` (not installed); replaced with native `st.rerun()`
+
+**Enhancements**
+- Replaced hardcoded position/company dropdowns with free-text inputs — any role is now supported
+- Added Industry/Domain field for richer AI context
+- Added Interview Style selector (Behavioral, Technical, Case Study, Culture Fit, Mixed)
+- Added optional Job Description text area — JD is injected into the system prompt for targeted questions
+- Added adjustable question count slider (3–10)
+- Enriched system prompt to enforce single-question-per-turn behavior and role-specific framing
+- Structured feedback format: score, strengths, improvements, hire recommendation, top tip
+- Added feedback download as `.txt`
+- Added required-field validation before interview start
+- Added progress bar during interview
+- Applied custom dark-mode CSS theme with Google Fonts
+
+---
+
+## 🔮 Roadmap / Future Improvements
+
+- [ ] Base44 Agent Builder integration for enhanced workflow automation
+- [ ] Support for Claude API (Anthropic) as an alternative LLM backend
+- [ ] Voice input / text-to-speech for a more realistic interview feel
+- [ ] Resume / CV upload (PDF) to auto-populate candidate profile
+- [ ] Interview history persistence (database or file storage)
+- [ ] Multi-round interview simulation (phone screen → technical → final panel)
+- [ ] Export feedback to PDF or DOCX
+- [ ] Admin dashboard for tracking sessions and scores over time
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome! To get started:
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/your-feature-name`
-3. Commit your changes: `git commit -m "Add your feature"`
-4. Push to the branch: `git push origin feature/your-feature-name`
-5. Open a Pull Request
+Pull requests are welcome. For major changes, please open an issue first to discuss what you'd like to change.
 
 ---
 
 ## 📄 License
 
-This project is open source. See [LICENSE](LICENSE) for details.
+[MIT](LICENSE)
 
 ---
 
-## 👤 Author
-
-**Demayne Collins**
-- GitHub: [@collins73](https://github.com/collins73)
-
----
-
-*Built to help job seekers practice smarter — because showing up unprepared is so last century.* 💼
+> Built with Streamlit + OpenAI GPT-4o. Because practicing interviews at 11pm is better than bombing them at 9am.
