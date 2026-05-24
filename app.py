@@ -251,8 +251,8 @@ if st.session_state.setup_complete and not st.session_state.feedback_shown and n
 
     # Progress indicator
     max_exchanges = st.session_state["question_count"]
-    current_q = min((st.session_state.user_message_count - 1) // 2 + 1, max_exchanges)
-    progress_pct = min((st.session_state.user_message_count - 1) / (max_exchanges * 2), 1.0)
+    current_q = min((st.session_state["user_message_count"] - 1) // 2 + 1, max_exchanges)
+    progress_pct = min((st.session_state["user_message_count"] - 1) / (max_exchanges * 2), 1.0)
     st.progress(progress_pct, text=f"Question {current_q} of {max_exchanges}")
 
     # OpenAI client
@@ -315,9 +315,9 @@ if st.session_state.setup_complete and not st.session_state.feedback_shown and n
 
     # Chat input
     max_user_turns = st.session_state["question_count"]
-    if st.session_state.user_message_count <= max_user_turns:
+    if st.session_state["user_message_count"] <= max_user_turns:
         if prompt := st.chat_input(
-            f"Your response ({st.session_state.user_message_count}/{max_user_turns})",
+            f"Your response ({st.session_state['user_message_count']}/{max_user_turns})",
             max_chars=1200
         ):
             st.session_state.messages.append({"role": "user", "content": prompt})
@@ -325,7 +325,7 @@ if st.session_state.setup_complete and not st.session_state.feedback_shown and n
                 st.markdown(prompt)
 
             # Only generate next question if not on the last answer
-            if st.session_state.user_message_count < max_user_turns:
+            if st.session_state["user_message_count"] < max_user_turns:
                 with st.chat_message("assistant"):
                     stream = client.chat.completions.create(
                         model=st.session_state["openai_model"],
@@ -338,9 +338,9 @@ if st.session_state.setup_complete and not st.session_state.feedback_shown and n
                     response = st.write_stream(stream)
                 st.session_state.messages.append({"role": "assistant", "content": response})
 
-            st.session_state.user_message_count += 1
+            st.session_state["user_message_count"] += 1
 
-    if st.session_state.user_message_count > max_user_turns:
+    if st.session_state["user_message_count"] > max_user_turns:
         st.session_state.chat_complete = True
         st.rerun()
 
