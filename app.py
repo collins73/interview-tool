@@ -1,38 +1,113 @@
 import streamlit as st
 from openai import OpenAI
-import tempfile
-import os
 
 # ─────────────────────────────────────────────
-# Page configuration
+# Page config
 # ─────────────────────────────────────────────
-st.set_page_config(page_title="AI Interview Tool", page_icon="🎙️")
-st.title("🎙️ AI Interview Tool")
+st.set_page_config(page_title="AI Interview Coach", page_icon="🎯", layout="centered")
+
+# ─────────────────────────────────────────────
+# Custom CSS — sleek dark interview room vibes
+# ─────────────────────────────────────────────
+st.markdown("""
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500&display=swap');
+
+    html, body, [class*="css"] {
+        font-family: 'DM Sans', sans-serif;
+        background-color: #0f1117;
+        color: #e8e8e8;
+    }
+    h1, h2, h3 {
+        font-family: 'DM Serif Display', serif;
+        color: #f0f0f0;
+    }
+    .stButton > button {
+        background: linear-gradient(135deg, #1a73e8, #0d47a1);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 0.5rem 1.5rem;
+        font-family: 'DM Sans', sans-serif;
+        font-weight: 500;
+        transition: all 0.2s ease;
+    }
+    .stButton > button:hover {
+        background: linear-gradient(135deg, #2196f3, #1565c0);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(26, 115, 232, 0.4);
+    }
+    .stTextInput > div > div > input,
+    .stTextArea > div > div > textarea,
+    .stSelectbox > div > div {
+        background-color: #1e2130;
+        color: #e8e8e8;
+        border: 1px solid #2d3147;
+        border-radius: 8px;
+    }
+    .stRadio > div {
+        background-color: #1e2130;
+        border-radius: 8px;
+        padding: 0.5rem;
+    }
+    .info-box {
+        background: linear-gradient(135deg, #1a1f35, #0d1829);
+        border-left: 3px solid #1a73e8;
+        padding: 1rem 1.5rem;
+        border-radius: 0 8px 8px 0;
+        margin: 1rem 0;
+    }
+    .score-card {
+        background: linear-gradient(135deg, #1a1f35, #0d1829);
+        border: 1px solid #2d3147;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin: 1rem 0;
+    }
+    .step-badge {
+        background: #1a73e8;
+        color: white;
+        border-radius: 20px;
+        padding: 2px 12px;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+    div[data-testid="stChatMessage"] {
+        background-color: #1e2130;
+        border-radius: 12px;
+        margin: 0.5rem 0;
+        padding: 0.5rem;
+    }
+</style>
+""", unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
 # Session state initialization
 # ─────────────────────────────────────────────
 defaults = {
     "setup_complete": False,
-    "user_message_count": 0,
+    "user_message_count": 1,
     "feedback_shown": False,
     "chat_complete": False,
     "messages": [],
     "name": "",
     "experience": "",
     "skills": "",
-    "level": "Junior",
-    "position": "Data Scientist",
-    "company": "Amazon",
-    "input_mode": "Text",          # "Text" or "Voice"
-    "voice_transcript": "",        # Holds the latest Whisper transcript
+    "level": "Mid-level",
+    "position": "",
+    "position_custom": False,
+    "company": "",
+    "industry": "",
+    "job_description": "",
+    "interview_style": "Behavioral",
+    "question_count": 5,
 }
 for key, val in defaults.items():
     if key not in st.session_state:
         st.session_state[key] = val
 
 # ─────────────────────────────────────────────
-# Helper callbacks
+# Callbacks
 # ─────────────────────────────────────────────
 def complete_setup():
     st.session_state.setup_complete = True
@@ -40,211 +115,320 @@ def complete_setup():
 def show_feedback():
     st.session_state.feedback_shown = True
 
-def transcribe_audio(audio_bytes: bytes) -> str:
-    """Send audio bytes to OpenAI Whisper and return the transcript."""
-    client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
-    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
-        tmp.write(audio_bytes)
-        tmp_path = tmp.name
-    try:
-        with open(tmp_path, "rb") as audio_file:
-            transcript = client.audio.transcriptions.create(
-                model="whisper-1",
-                file=audio_file,
-                response_format="text",
-            )
-        return transcript.strip()
-    finally:
-        os.unlink(tmp_path)
+def restart():
+    for key in list(st.session_state.keys()):
+        del st.session_state[key]
+    st.rerun()
 
 # ─────────────────────────────────────────────
 # STAGE 1 — Setup
 # ─────────────────────────────────────────────
 if not st.session_state.setup_complete:
 
-    st.subheader("👤 Personal Information")
-    st.session_state["name"] = st.text_input(
-        "Name", value=st.session_state["name"],
-        placeholder="Enter your name", max_chars=40
+    st.title("🎯 AI Interview Coach")
+    st.markdown(
+        '<div class="info-box">Answer up to <strong>5 questions</strong> from your virtual interviewer. '
+        'Get scored and receive actionable feedback. '
+        '<em>No awkward handshakes required.</em></div>',
+        unsafe_allow_html=True
     )
+
+    # ── Candidate Info ──────────────────────────
+    st.markdown("### 👤 Candidate Profile")
+    col_a, col_b = st.columns([1, 1])
+    with col_a:
+        st.session_state["name"] = st.text_input(
+            "Full Name *",
+            value=st.session_state["name"],
+            placeholder="Jane Doe",
+            max_chars=60
+        )
+    with col_b:
+        st.session_state["level"] = st.selectbox(
+            "Seniority Level *",
+            ["Intern", "Junior", "Mid-level", "Senior", "Lead", "Principal", "Director", "Executive"],
+            index=["Intern", "Junior", "Mid-level", "Senior", "Lead", "Principal", "Director", "Executive"]
+                  .index(st.session_state["level"])
+        )
+
     st.session_state["experience"] = st.text_area(
-        "Experience", value=st.session_state["experience"],
-        placeholder="Describe your experience", max_chars=200
+        "Relevant Experience *",
+        value=st.session_state["experience"],
+        placeholder="Briefly describe your work history and key accomplishments...",
+        max_chars=500,
+        height=100
     )
     st.session_state["skills"] = st.text_area(
-        "Skills", value=st.session_state["skills"],
-        placeholder="List your skills", max_chars=200
+        "Key Skills *",
+        value=st.session_state["skills"],
+        placeholder="e.g. Python, project management, stakeholder communication, cloud architecture...",
+        max_chars=300,
+        height=80
     )
 
-    st.subheader("🏢 Company and Position")
-    col1, col2 = st.columns(2)
+    st.divider()
+
+    # ── Role Info ────────────────────────────────
+    st.markdown("### 🏢 Role Details")
+
+    col1, col2 = st.columns([1, 1])
     with col1:
-        st.session_state["level"] = st.radio(
-            "Choose level",
-            options=["Junior", "Mid-level", "Senior"],
-            index=["Junior", "Mid-level", "Senior"].index(st.session_state["level"])
+        st.session_state["position"] = st.text_input(
+            "Job Title / Position *",
+            value=st.session_state["position"],
+            placeholder="e.g. Program Manager, DevOps Engineer, UX Researcher..."
         )
     with col2:
-        positions = ("Data Scientist", "Data Engineer", "ML Engineer", "BI Analyst", "Financial Analyst")
-        st.session_state["position"] = st.selectbox(
-            "Choose a position", positions,
-            index=positions.index(st.session_state["position"])
+        st.session_state["company"] = st.text_input(
+            "Company / Organization",
+            value=st.session_state["company"],
+            placeholder="e.g. Lockheed Martin, Google, a stealth startup..."
         )
 
-    companies = ("Amazon", "Meta", "Udemy", "365 Company", "Nestle", "LinkedIn", "Spotify")
-    st.session_state["company"] = st.selectbox(
-        "Select a Company", companies,
-        index=companies.index(st.session_state["company"])
+    col3, col4 = st.columns([1, 1])
+    with col3:
+        st.session_state["industry"] = st.text_input(
+            "Industry / Domain",
+            value=st.session_state["industry"],
+            placeholder="e.g. Defense, FinTech, Healthcare, SaaS..."
+        )
+    with col4:
+        st.session_state["interview_style"] = st.selectbox(
+            "Interview Focus",
+            ["Behavioral (STAR-based)", "Technical Deep-Dive", "Case Study / Problem Solving",
+             "Culture Fit", "Mixed (Behavioral + Technical)"],
+            index=0
+        )
+
+    st.session_state["job_description"] = st.text_area(
+        "Job Description / Requirements (optional but recommended)",
+        value=st.session_state["job_description"],
+        placeholder="Paste the JD or key requirements here. The more context, the sharper the questions...",
+        max_chars=1500,
+        height=120
     )
 
-    st.subheader("🎙️ Response Mode")
-    st.session_state["input_mode"] = st.radio(
-        "How would you like to respond during the interview?",
-        options=["Text", "Voice (Whisper)"],
-        horizontal=True,
-        help="Voice mode records your spoken answer and transcribes it automatically via OpenAI Whisper."
+    st.session_state["question_count"] = st.slider(
+        "Number of Interview Questions",
+        min_value=3, max_value=10, value=5,
+        help="How many back-and-forth exchanges before feedback is generated"
     )
 
-    if st.button("Start Interview", on_click=complete_setup):
-        st.write("Setup complete. Starting interview...")
+    st.divider()
+
+    # ── Validation ────────────────────────────────
+    required_filled = all([
+        st.session_state["name"].strip(),
+        st.session_state["experience"].strip(),
+        st.session_state["skills"].strip(),
+        st.session_state["position"].strip(),
+    ])
+
+    if not required_filled:
+        st.warning("⚠️ Please fill in all required fields (*) before starting.")
+
+    if st.button("🚀 Start Interview", on_click=complete_setup, disabled=not required_filled):
+        st.write("Buckle up — the panel is ready for you.")
 
 # ─────────────────────────────────────────────
 # STAGE 2 — Interview
 # ─────────────────────────────────────────────
 if st.session_state.setup_complete and not st.session_state.feedback_shown and not st.session_state.chat_complete:
 
-    st.info("Start by introducing yourself", icon="👋")
+    company_display = f" at **{st.session_state['company']}**" if st.session_state["company"] else ""
+    industry_display = f" ({st.session_state['industry']})" if st.session_state["industry"] else ""
 
+    st.title("🎤 Interview in Progress")
+    st.markdown(
+        f'<div class="info-box">'
+        f'Interviewing <strong>{st.session_state["name"]}</strong> for '
+        f'<strong>{st.session_state["level"]} {st.session_state["position"]}</strong>'
+        f'{company_display}{industry_display} &nbsp;|&nbsp; '
+        f'Focus: <strong>{st.session_state["interview_style"]}</strong>'
+        f'</div>',
+        unsafe_allow_html=True
+    )
+
+    # Progress indicator
+    max_exchanges = st.session_state["question_count"]
+    current_q = min((st.session_state.user_message_count - 1) // 2 + 1, max_exchanges)
+    progress_pct = min((st.session_state.user_message_count - 1) / (max_exchanges * 2), 1.0)
+    st.progress(progress_pct, text=f"Question {current_q} of {max_exchanges}")
+
+    # OpenAI client
     client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
     if "openai_model" not in st.session_state:
         st.session_state["openai_model"] = "gpt-4o"
 
-    # Build system prompt on first load
+    # Build system prompt — position-agnostic and rich with context
     if not st.session_state.messages:
-        st.session_state.messages = [{
-            "role": "system",
-            "content": (
-                f"You are an HR executive that interviews an interviewee called {st.session_state['name']} "
-                f"with experience {st.session_state['experience']} and skills {st.session_state['skills']}. "
-                f"You should interview them for the position {st.session_state['level']} {st.session_state['position']} "
-                f"at the company {st.session_state['company']}."
+        jd_section = (
+            f"\n\nJob Description / Requirements provided:\n{st.session_state['job_description']}"
+            if st.session_state["job_description"].strip()
+            else ""
+        )
+        company_section = (
+            f" at {st.session_state['company']}" if st.session_state["company"] else ""
+        )
+        industry_section = (
+            f" in the {st.session_state['industry']} industry" if st.session_state["industry"] else ""
+        )
+
+        system_prompt = (
+            f"You are a professional interviewer conducting a {st.session_state['interview_style']} interview "
+            f"for the position of {st.session_state['level']} {st.session_state['position']}"
+            f"{company_section}{industry_section}.\n\n"
+            f"Candidate name: {st.session_state['name']}\n"
+            f"Their experience: {st.session_state['experience']}\n"
+            f"Their skills: {st.session_state['skills']}"
+            f"{jd_section}\n\n"
+            f"Instructions:\n"
+            f"- Ask one focused question at a time. Do NOT ask multiple questions in a single turn.\n"
+            f"- Tailor questions specifically to the role, industry, and seniority level provided.\n"
+            f"- For '{st.session_state['interview_style']}', use the appropriate question format "
+            f"(e.g., STAR prompts for behavioral, technical problems for technical deep-dives).\n"
+            f"- Acknowledge the candidate's answer briefly before asking the next question (1-2 sentences max).\n"
+            f"- Do NOT provide feedback, scores, or commentary during the interview — save that for the end.\n"
+            f"- Keep a professional but approachable tone.\n"
+            f"- Start by greeting {st.session_state['name']} and asking them to briefly introduce themselves."
+        )
+
+        st.session_state.messages = [{"role": "system", "content": system_prompt}]
+
+        # Auto-trigger first greeting from interviewer
+        with st.chat_message("assistant"):
+            stream = client.chat.completions.create(
+                model=st.session_state["openai_model"],
+                messages=st.session_state.messages,
+                stream=True,
             )
-        }]
+            response = st.write_stream(stream)
+        st.session_state.messages.append({"role": "assistant", "content": response})
 
-    # Render chat history (skip system message)
-    for message in st.session_state.messages:
-        if message["role"] != "system":
-            with st.chat_message(message["role"]):
-                st.markdown(message["content"])
+    # Display message history (skip system prompt)
+    else:
+        for message in st.session_state.messages:
+            if message["role"] != "system":
+                with st.chat_message(message["role"]):
+                    st.markdown(message["content"])
 
-    # ── Input area ─────────────────────────────
-    prompt = None
+    # Chat input
+    max_user_turns = st.session_state["question_count"]
+    if st.session_state.user_message_count <= max_user_turns:
+        if prompt := st.chat_input(
+            f"Your response ({st.session_state.user_message_count}/{max_user_turns})",
+            max_chars=1200
+        ):
+            st.session_state.messages.append({"role": "user", "content": prompt})
+            with st.chat_message("user"):
+                st.markdown(prompt)
 
-    if st.session_state.user_message_count < 5:
+            # Only generate next question if not on the last answer
+            if st.session_state.user_message_count < max_user_turns:
+                with st.chat_message("assistant"):
+                    stream = client.chat.completions.create(
+                        model=st.session_state["openai_model"],
+                        messages=[
+                            {"role": m["role"], "content": m["content"]}
+                            for m in st.session_state.messages
+                        ],
+                        stream=True,
+                    )
+                    response = st.write_stream(stream)
+                st.session_state.messages.append({"role": "assistant", "content": response})
 
-        use_voice = st.session_state["input_mode"] == "Voice (Whisper)"
+            st.session_state.user_message_count += 1
 
-        if use_voice:
-            # ── Voice mode ──
-            st.markdown("**🎙️ Voice Mode** — Record your answer below:")
-            audio_data = st.audio_input(
-                label="Click to record your response",
-                key=f"audio_input_{st.session_state.user_message_count}"
-            )
-
-            if audio_data is not None:
-                with st.spinner("Transcribing with Whisper..."):
-                    transcript = transcribe_audio(audio_data.getvalue())
-
-                if transcript:
-                    st.success(f"📝 **Transcript:** {transcript}")
-                    # Use a button to confirm and submit the transcript
-                    if st.button("✅ Submit this response", key=f"submit_{st.session_state.user_message_count}"):
-                        prompt = transcript
-                else:
-                    st.warning("Whisper couldn't catch that — silence is golden but unhelpful here. Try again.")
-
-        else:
-            # ── Text mode ──
-            if typed := st.chat_input("Your response", max_chars=1000):
-                prompt = typed
-
-    # ── Process submitted prompt ────────────────
-    if prompt:
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        with st.chat_message("user"):
-            st.markdown(prompt)
-
-        if st.session_state.user_message_count < 4:
-            with st.chat_message("assistant"):
-                stream = client.chat.completions.create(
-                    model=st.session_state["openai_model"],
-                    messages=[
-                        {"role": m["role"], "content": m["content"]}
-                        for m in st.session_state.messages
-                    ],
-                    stream=True,
-                )
-                response = st.write_stream(stream)
-            st.session_state.messages.append({"role": "assistant", "content": response})
-
-        st.session_state.user_message_count += 1
-
-        if st.session_state.user_message_count >= 5:
-            st.session_state.chat_complete = True
-            st.rerun()
+    if st.session_state.user_message_count > max_user_turns:
+        st.session_state.chat_complete = True
+        st.rerun()
 
 # ─────────────────────────────────────────────
 # STAGE 3 — Get Feedback button
 # ─────────────────────────────────────────────
 if st.session_state.chat_complete and not st.session_state.feedback_shown:
-    st.info("Interview complete! Ready to see how you did?", icon="🏁")
-    if st.button("Get Feedback", on_click=show_feedback):
-        st.write("Fetching feedback...")
+    st.success("✅ Interview complete! The panel has heard enough — time to find out if you impressed them.")
+    if st.button("📊 Get My Feedback", on_click=show_feedback):
+        st.write("Crunching the data... (The AI judge is putting on its monocle)")
 
 # ─────────────────────────────────────────────
-# STAGE 4 — Feedback display
+# STAGE 4 — Feedback
 # ─────────────────────────────────────────────
 if st.session_state.feedback_shown:
 
-    st.subheader("📊 Interview Feedback")
+    st.title("📋 Interview Feedback")
+
+    company_display = f" at {st.session_state['company']}" if st.session_state["company"] else ""
+    st.markdown(
+        f'<div class="info-box">'
+        f'Performance review for <strong>{st.session_state["name"]}</strong> — '
+        f'<strong>{st.session_state["level"]} {st.session_state["position"]}</strong>{company_display}'
+        f'</div>',
+        unsafe_allow_html=True
+    )
 
     conversation_history = "\n".join([
-        f"{msg['role']}: {msg['content']}"
+        f"{msg['role'].upper()}: {msg['content']}"
         for msg in st.session_state.messages
+        if msg["role"] != "system"
     ])
 
     feedback_client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-    feedback_completion = feedback_client.chat.completions.create(
-        model="gpt-4o",
-        messages=[
-            {
-                "role": "system",
-                "content": (
-                    "You are a helpful tool that provides feedback on an interviewee's performance. "
-                    "Before the feedback, give a score of 1 to 10. "
-                    "Follow this format:\n\n"
-                    "Overall Score: //Your score\n\n"
-                    "Feedback: //Your detailed feedback\n\n"
-                    "Give only the feedback — do not ask any additional questions."
-                )
-            },
-            {
-                "role": "user",
-                "content": (
-                    f"This is the interview you need to evaluate. "
-                    f"Keep in mind that you are only a tool and should not engage in conversation: {conversation_history}"
-                )
-            }
-        ]
+    with st.spinner("Generating your personalized feedback..."):
+        feedback_completion = feedback_client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        f"You are a senior talent evaluator providing honest, constructive feedback "
+                        f"on a {st.session_state['interview_style']} interview for the role of "
+                        f"{st.session_state['level']} {st.session_state['position']}.\n\n"
+                        "Evaluate the candidate and respond ONLY with the following structured format:\n\n"
+                        "Overall Score: [X/10]\n\n"
+                        "## Strengths\n"
+                        "- [Bullet point strengths from the interview]\n\n"
+                        "## Areas for Improvement\n"
+                        "- [Specific, actionable improvement areas]\n\n"
+                        "## Recommendation\n"
+                        "[Hire / Strong Hire / No Hire / Needs More Interview] with a 2-3 sentence justification.\n\n"
+                        "## Top Tip\n"
+                        "[One single most impactful thing they should work on before their next interview]\n\n"
+                        "Do not add any preamble, sign-offs, or additional commentary outside this format."
+                    )
+                },
+                {
+                    "role": "user",
+                    "content": (
+                        f"Here is the full interview transcript to evaluate:\n\n{conversation_history}"
+                    )
+                }
+            ]
+        )
+
+    feedback_text = feedback_completion.choices[0].message.content
+
+    st.markdown(
+        f'<div class="score-card">{feedback_text}</div>',
+        unsafe_allow_html=True
     )
 
-    st.write(feedback_completion.choices[0].message.content)
-
     st.divider()
-    if st.button("🔄 Restart Interview", type="primary"):
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
-        st.rerun()
+    col_r, col_s = st.columns([1, 1])
+    with col_r:
+        if st.button("🔄 Start New Interview", type="primary", on_click=restart):
+            pass
+    with col_s:
+        st.download_button(
+            label="⬇️ Download Feedback",
+            data=f"Interview Feedback — {st.session_state['name']}\n"
+                 f"Role: {st.session_state['level']} {st.session_state['position']}\n"
+                 f"Company: {st.session_state.get('company', 'N/A')}\n"
+                 f"Industry: {st.session_state.get('industry', 'N/A')}\n"
+                 f"Interview Style: {st.session_state['interview_style']}\n\n"
+                 f"{'='*50}\n\n{feedback_text}",
+            file_name=f"interview_feedback_{st.session_state['name'].replace(' ', '_').lower()}.txt",
+            mime="text/plain"
+        )
