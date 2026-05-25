@@ -431,7 +431,10 @@ if st.session_state.feedback_shown:
                  f"{'='*50}\n\n{feedback_text}",
             file_name=f"interview_feedback_{st.session_state['name'].replace(' ', '_').lower()}.txt",
             mime="text/plain"
-        import streamlit as st
+        )
+
+
+import streamlit as st
 from openai import OpenAI
 
 # ─────────────────────────────────────────────
